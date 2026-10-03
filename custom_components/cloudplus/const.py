@@ -16,6 +16,10 @@ CONF_VIDEO_PASSWORD = "video_password"
 CONF_STREAM_QUALITY = "stream_quality"
 
 DEFAULT_MOTION_TIMEOUT = 120
+# Always-connected (mains-powered) reconnect backoff. Only applies while no
+# viewer is attached; a real viewer always gets an immediate reconnect.
+ALWAYS_CONNECTED_RETRY_INITIAL_S = 2.0
+ALWAYS_CONNECTED_RETRY_MAX_S = 60.0
 DEFAULT_COUNTRY_CODE = "FR"
 DEFAULT_PHONE_CODE = "33"
 DEFAULT_APP_PROFILE = "cloudedge"

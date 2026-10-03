@@ -39,6 +39,7 @@ from ..p2p_streamer.codecs import (
     uses_arrival_timed_mux,
     uses_timestamp_timed_mux,
 )
+from .always_connected import AlwaysConnectedMixin
 from .iot import parse_capabilities
 from .motion import MotionEventListener
 from .muxer import FfmpegMuxer
@@ -69,7 +70,7 @@ SNAPSHOT_CARD_REFRESH_INTERVAL = 3.0
 SNAPSHOT_CARD_REQUEST_TTL = 30.0
 
 
-class CloudEdgeMeariCoordinator(CoordinatorStateMixin):
+class CloudEdgeMeariCoordinator(AlwaysConnectedMixin, CoordinatorStateMixin):
     """Small runtime coordinator used by debug.py and camera entity."""
 
     def __init__(
@@ -128,6 +129,7 @@ class CloudEdgeMeariCoordinator(CoordinatorStateMixin):
         self._motion_detected = False
         self._last_motion_time = 0.0
         self._motion_wake_enabled = True
+        self._init_always_connected()
         self._motion_timeout = DEFAULT_MOTION_TIMEOUT
         self._stream_host_mode = "ip"
         self._initial_frame_grab = bool(initial_frame_grab)
@@ -345,11 +347,7 @@ class CloudEdgeMeariCoordinator(CoordinatorStateMixin):
                 self._poll_status()
                 last_status_poll = now
             self._consume_wake_event()
-            should_stream = (
-                self._stream_server.client_count > 0
-                or time.monotonic() < self._live_deadline
-            )
-            if not should_stream:
+            if not self._ipc_should_stream(now):
                 self._stop_streamer(join_timeout=2)
                 self._muxer.stop()
                 time.sleep(1)
@@ -357,6 +355,8 @@ class CloudEdgeMeariCoordinator(CoordinatorStateMixin):
 
             if not self._stream_thread or not self._stream_thread.is_alive():
                 self._stream_thread = None
+                if not self._ipc_ready_to_start(now):
+                    continue
                 self._start_streamer_once()
             elif self._stream_video_stale(now):
                 self._restart_stale_stream(now, context="ipc")
@@ -369,6 +369,7 @@ class CloudEdgeMeariCoordinator(CoordinatorStateMixin):
             worker.join(timeout=1)
             if not worker.is_alive() and self._stream_thread is worker:
                 self._stream_thread = None
+                self._ipc_session_ended(time.monotonic())
 
     def _run_initial_frame_grab(self) -> bool:
         self._set_camera_awake(True)

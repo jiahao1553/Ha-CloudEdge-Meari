@@ -147,6 +147,7 @@ discovered from the camera's IoT model values.
 | Charge Status       | `sensor`        | Discharging / Charging / Full text status. |
 | Wake Camera         | `button`        | Manually wake the camera. |
 | Wake on Motion      | `switch`        | Toggle auto-wake when a motion event fires. |
+| Always Connected    | `switch`        | Mains-powered cameras only. Keep the P2P stream open even with no viewer so dashboards open instantly (default on) — see [Always-connected mode](#always-connected-mode-mains-powered-cameras). |
 | Motion Timeout      | `number`        | How long the camera stays awake after motion (10–600 s). |
 | Stream Host Mode    | `select`        | `IP Address` (default) or `Docker Hostname` for the stream URL — see [Streaming notes](#streaming-notes). |
 | Stream Quality      | `select`        | `AUTO`, `SD`, `HD`, `QHD`, … — advertised profiles, or the native HD/SD fallback for legacy cameras. |
@@ -221,6 +222,24 @@ Some Meari doorbells are reported by the API as `doorbell` / `pictureDoorBell`
 rather than `snap`, even though their capability map advertises `bat`. The
 coordinator treats those battery-capable doorbell categories as battery
 cameras so they use the same wake/idle-stream lifecycle.
+
+### Always-connected mode (mains-powered cameras)
+
+By default a plugged-in camera now keeps its P2P session open permanently.
+The MPEG-TS server therefore always holds a current PAT/PMT + keyframe, so
+HA, go2rtc or Frigate join an already-running stream instead of paying for
+signaling, relay setup and the first keyframe on every view.
+
+- Turn the **Always Connected** switch off to return to on-demand streaming
+  (session only runs while a consumer is attached). The choice is restored
+  across restarts.
+- If the session keeps failing while nobody is watching, reconnects back
+  off from 2 s up to 60 s. A real viewer always reconnects immediately.
+- Trade-off: the camera streams to HA continuously (Wi-Fi airtime, a small
+  ffmpeg copy process). Check that the session runs on the direct LAN path
+  rather than a TURN relay before leaving it on.
+- For the fastest playback, use `SD` (H.264) and a WebRTC player via go2rtc
+  instead of HA's default HLS card.
 
 ### Stream Host Mode
 

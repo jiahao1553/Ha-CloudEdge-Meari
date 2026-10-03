@@ -181,6 +181,11 @@ stale client joins, and source-idle recovery, but not while video is current.
 - Idle streams reuse the latest keyframe/still with the same advertised
   stream properties and low refresh cost; they should **not** push still
   frames at high FPS.
+- Mains-powered (IPC) cameras default to **always-connected**: the P2P
+  session stays open with zero consumers so the bootstrap is always warm.
+  Policy lives in `coordinator/always_connected.py`. Unattended sessions
+  that end without delivering video back off 2 s → 60 s; any consumer or
+  wake window bypasses the backoff. Battery cameras are never forced on.
 - Video is copied. Audio-only encoding (G.711 µ-law → AAC) is expected.
   **Avoid video transcoding** so low-power Home Assistant hosts remain
   usable.

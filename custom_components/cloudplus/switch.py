@@ -1,4 +1,4 @@
-"""Switch platform for CloudEdge / Meari — wake on motion toggle."""
+"""Switch platform for CloudEdge / Meari — wake, always-connected and IoT toggles."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import CloudEdgeMeariCoordinator
@@ -136,6 +137,8 @@ async def async_setup_entry(
     entities: list[SwitchEntity] = []
     if coord.is_battery_camera:
         entities.append(CloudEdgeMeariMotionWakeSwitch(coord, entry))
+    else:
+        entities.append(CloudEdgeMeariAlwaysConnectedSwitch(coord, entry))
     if coord.has_lamp:
         entities.append(CloudEdgeMeariLampSwitch(coord, entry))
     entities.extend(
@@ -210,6 +213,48 @@ class CloudEdgeMeariMotionWakeSwitch(CloudEdgeMeariEntity, SwitchEntity):
     async def async_turn_off(self, **_kwargs: Any) -> None:
         """Disable wake on motion."""
         self._coordinator.set_motion_wake_enabled(False)
+        self.async_write_ha_state()
+
+
+class CloudEdgeMeariAlwaysConnectedSwitch(
+    CloudEdgeMeariEntity, SwitchEntity, RestoreEntity
+):
+    """Keep a mains-powered camera's P2P stream open with or without viewers.
+
+    On: the live session stays up permanently, so opening a dashboard (or a
+    go2rtc / Frigate consumer connecting) joins a running stream instantly.
+    Off: the session only runs while a consumer is attached (upstream default).
+    The choice survives Home Assistant restarts.
+    """
+
+    _attr_name = "Always Connected"
+    _attr_icon = "mdi:lan-connect"
+
+    def __init__(
+        self, coordinator: CloudEdgeMeariCoordinator, entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{coordinator.device_uuid}_always_connected"
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the user's last choice before the first stream decision."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None and last_state.state in ("on", "off"):
+            self._coordinator.set_always_connected(last_state.state == "on")
+
+    @property
+    def is_on(self) -> bool:
+        return self._coordinator.always_connected
+
+    async def async_turn_on(self, **_kwargs: Any) -> None:
+        """Keep the live stream connected permanently."""
+        self._coordinator.set_always_connected(True)
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **_kwargs: Any) -> None:
+        """Only stream while a consumer is connected."""
+        self._coordinator.set_always_connected(False)
         self.async_write_ha_state()
 
 

@@ -77,7 +77,8 @@
       "battery": { "name": "Battery" }
     },
     "switch": {
-      "motion_wake": { "name": "Wake on Motion" }
+      "motion_wake": { "name": "Wake on Motion" },
+      "always_connected": { "name": "Always Connected" }
     }
   }
 }
