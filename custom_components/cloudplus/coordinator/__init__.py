@@ -40,6 +40,7 @@ from ..p2p_streamer.codecs import (
     uses_timestamp_timed_mux,
 )
 from .always_connected import AlwaysConnectedMixin
+from .connectivity import ConnectivityMixin
 from .iot import parse_capabilities
 from .motion import MotionEventListener
 from .muxer import FfmpegMuxer
@@ -70,7 +71,9 @@ SNAPSHOT_CARD_REFRESH_INTERVAL = 3.0
 SNAPSHOT_CARD_REQUEST_TTL = 30.0
 
 
-class CloudEdgeMeariCoordinator(AlwaysConnectedMixin, CoordinatorStateMixin):
+class CloudEdgeMeariCoordinator(
+    AlwaysConnectedMixin, ConnectivityMixin, CoordinatorStateMixin
+):
     """Small runtime coordinator used by debug.py and camera entity."""
 
     def __init__(
@@ -130,6 +133,7 @@ class CloudEdgeMeariCoordinator(AlwaysConnectedMixin, CoordinatorStateMixin):
         self._last_motion_time = 0.0
         self._motion_wake_enabled = True
         self._init_always_connected()
+        self._init_connectivity()
         self._motion_timeout = DEFAULT_MOTION_TIMEOUT
         self._stream_host_mode = "ip"
         self._initial_frame_grab = bool(initial_frame_grab)
@@ -294,6 +298,7 @@ class CloudEdgeMeariCoordinator(AlwaysConnectedMixin, CoordinatorStateMixin):
             if now - last_status_poll >= STATUS_POLL_INTERVAL:
                 self._poll_status()
                 last_status_poll = now
+            self._connectivity_tick(now)
 
             if (
                 self._initial_frame_grab
@@ -347,6 +352,7 @@ class CloudEdgeMeariCoordinator(AlwaysConnectedMixin, CoordinatorStateMixin):
                 self._poll_status()
                 last_status_poll = now
             self._consume_wake_event()
+            self._connectivity_tick(now)
             if not self._ipc_should_stream(now):
                 self._stop_streamer(join_timeout=2)
                 self._muxer.stop()
@@ -399,6 +405,7 @@ class CloudEdgeMeariCoordinator(AlwaysConnectedMixin, CoordinatorStateMixin):
         while self._running and time.monotonic() < self._live_deadline:
             now = time.monotonic()
             self._consume_wake_event()
+            self._connectivity_tick(now)
             if self._stream_restart.is_set():
                 self._stream_restart.clear()
                 self._stop_streamer(join_timeout=2)

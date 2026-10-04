@@ -1,4 +1,4 @@
-"""Sensor platform for CloudEdge / Meari — battery level."""
+"""Sensor platform for CloudEdge / Meari — battery, climate & connection."""
 
 from __future__ import annotations
 
@@ -11,12 +11,13 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import CloudEdgeMeariCoordinator
+from .coordinator.connectivity import CONNECTION_STATES
 from .entity import CloudEdgeMeariEntity, CloudEdgeMeariIotNumericEntity
 from .meari_commands import HUMIDITY, TEMPERATURE, WIFI_STRENGTH
 
@@ -120,7 +121,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up CloudEdge / Meari sensors from a config entry."""
     coord: CloudEdgeMeariCoordinator = hass.data[DOMAIN][entry.entry_id]
-    entities: list[SensorEntity] = []
+    entities: list[SensorEntity] = [CloudEdgeMeariConnectionStatusSensor(coord, entry)]
     if coord.is_battery_camera:
         entities.append(CloudEdgeMeariBatterySensor(coord, entry))
         entities.append(CloudEdgeMeariChargeStatusSensor(coord, entry))
@@ -148,6 +149,30 @@ class CloudEdgeMeariIotSensor(CloudEdgeMeariIotNumericEntity, SensorEntity):
         self._attr_native_unit_of_measurement = spec.unit
         self._attr_suggested_display_precision = spec.precision
         self._attr_unique_id = f"{coordinator.device_uuid}_iot_sensor_{spec.code}"
+
+
+class CloudEdgeMeariConnectionStatusSensor(CloudEdgeMeariEntity, SensorEntity):
+    """Detailed connectivity state behind the Online binary sensor."""
+
+    _attr_name = "Connection Status"
+    _attr_icon = "mdi:lan-check"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = CONNECTION_STATES
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self, coordinator: CloudEdgeMeariCoordinator, entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{coordinator.device_uuid}_connection_status"
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def native_value(self) -> str:
+        return self._coordinator.connection_status
 
 
 class CloudEdgeMeariChargeStatusSensor(CloudEdgeMeariEntity, SensorEntity):

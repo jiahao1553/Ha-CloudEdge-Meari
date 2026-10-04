@@ -148,6 +148,8 @@ discovered from the camera's IoT model values.
 | Wake Camera         | `button`        | Manually wake the camera. |
 | Wake on Motion      | `switch`        | Toggle auto-wake when a motion event fires. |
 | Always Connected    | `switch`        | Mains-powered cameras only. Keep the P2P stream open even with no viewer so dashboards open instantly (default on) — see [Always-connected mode](#always-connected-mode-mains-powered-cameras). |
+| Online              | `binary_sensor` | Connectivity: on while streaming / online / dormant, off when offline or unreachable. Attributes: `connection_status`, `cloud_status`, `last_seen`. |
+| Connection Status   | `sensor`        | Diagnostic enum: `streaming`, `online`, `dormant`, `offline`, `unreachable`, `unknown`. |
 | Motion Timeout      | `number`        | How long the camera stays awake after motion (10–600 s). |
 | Stream Host Mode    | `select`        | `IP Address` (default) or `Docker Hostname` for the stream URL — see [Streaming notes](#streaming-notes). |
 | Stream Quality      | `select`        | `AUTO`, `SD`, `HD`, `QHD`, … — advertised profiles, or the native HD/SD fallback for legacy cameras. |
@@ -240,6 +242,21 @@ signaling, relay setup and the first keyframe on every view.
   rather than a TURN relay before leaving it on.
 - For the fastest playback, use `SD` (H.264) and a WebRTC player via go2rtc
   instead of HA's default HLS card.
+
+### Online / offline tracking
+
+Every camera gets an **Online** connectivity sensor plus a diagnostic
+**Connection Status** sensor. They combine two signals:
+
+- **Cloud presence**, polled every 60 s from Meari's OpenAPI
+  (`online` / `dormancy` / `offline`).
+- **Live evidence**: video in the last 30 s means `streaming` regardless of
+  the cloud. A mains camera in always-connected mode that delivers no video
+  for 120 s is `unreachable` even if the cloud still says online.
+
+`Online` stays available when the integration itself is degraded, so an
+"camera went offline" automation fires instead of the entity going
+unavailable.
 
 ### Stream Host Mode
 

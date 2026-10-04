@@ -20,6 +20,12 @@ DEFAULT_MOTION_TIMEOUT = 120
 # viewer is attached; a real viewer always gets an immediate reconnect.
 ALWAYS_CONNECTED_RETRY_INITIAL_S = 2.0
 ALWAYS_CONNECTED_RETRY_MAX_S = 60.0
+# Connectivity tracking: cloud presence poll cadence, how recent a video frame
+# must be to count as "streaming", and how long an always-connected session may
+# go without video before the camera is reported unreachable.
+CONNECTIVITY_POLL_INTERVAL_S = 60.0
+CONNECTIVITY_LIVE_EVIDENCE_S = 30.0
+CONNECTIVITY_UNREACHABLE_AFTER_S = 120.0
 DEFAULT_COUNTRY_CODE = "FR"
 DEFAULT_PHONE_CODE = "33"
 DEFAULT_APP_PROFILE = "cloudedge"

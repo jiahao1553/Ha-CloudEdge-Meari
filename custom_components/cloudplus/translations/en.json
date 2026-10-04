@@ -52,7 +52,8 @@
     "binary_sensor": {
       "motion": { "name": "Motion" },
       "awake": { "name": "Camera Awake" },
-      "charging": { "name": "Charging" }
+      "charging": { "name": "Charging" },
+      "online": { "name": "Online" }
     },
     "button": {
       "wake": { "name": "Wake Camera" }
@@ -64,7 +65,18 @@
       "motion_timeout": { "name": "Motion Timeout" }
     },
     "sensor": {
-      "battery": { "name": "Battery" }
+      "battery": { "name": "Battery" },
+      "connection_status": {
+        "name": "Connection Status",
+        "state": {
+          "streaming": "Streaming",
+          "online": "Online",
+          "dormant": "Dormant",
+          "offline": "Offline",
+          "unreachable": "Unreachable",
+          "unknown": "Unknown"
+        }
+      }
     },
     "switch": {
       "motion_wake": { "name": "Wake on Motion" },

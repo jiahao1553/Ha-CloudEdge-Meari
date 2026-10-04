@@ -1,8 +1,9 @@
-"""Binary sensor platform for CloudEdge / Meari — motion & awake state."""
+"""Binary sensor platform for CloudEdge / Meari — motion, awake & online state."""
 
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -27,7 +28,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up CloudEdge / Meari binary sensors from a config entry."""
     coord: CloudEdgeMeariCoordinator = hass.data[DOMAIN][entry.entry_id]
-    entities = [CloudEdgeMeariMotionSensor(coord, entry)]
+    entities = [
+        CloudEdgeMeariMotionSensor(coord, entry),
+        CloudEdgeMeariOnlineSensor(coord, entry),
+    ]
     if coord.is_battery_camera:
         entities.append(CloudEdgeMeariAwakeSensor(coord, entry))
         entities.append(CloudEdgeMeariChargingSensor(coord, entry))
@@ -105,3 +109,46 @@ class CloudEdgeMeariChargingSensor(CloudEdgeMeariEntity, BinarySensorEntity):
         if self._coordinator.battery_percent is None:
             return None
         return self._coordinator.battery_charging
+
+
+class CloudEdgeMeariOnlineSensor(CloudEdgeMeariEntity, BinarySensorEntity):
+    """Whether the camera is reachable (cloud presence + live video evidence).
+
+    On for ``streaming`` / ``online`` / ``dormant``; off for ``offline`` /
+    ``unreachable``; unknown until the first cloud poll completes. It stays
+    available while the integration itself is struggling, so an "offline"
+    automation still fires instead of the entity going unavailable.
+    """
+
+    _attr_name = "Online"
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(
+        self, coordinator: CloudEdgeMeariCoordinator, entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{coordinator.device_uuid}_online"
+
+    @property
+    def available(self) -> bool:
+        return (
+            self._coordinator.connection_status != "unknown"
+            or self._coordinator.available
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._coordinator.camera_online
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        last_seen = self._coordinator.last_seen
+        return {
+            "connection_status": self._coordinator.connection_status,
+            "cloud_status": self._coordinator.cloud_status,
+            "last_seen": (
+                datetime.fromtimestamp(last_seen, tz=timezone.utc).isoformat()
+                if last_seen
+                else None
+            ),
+        }

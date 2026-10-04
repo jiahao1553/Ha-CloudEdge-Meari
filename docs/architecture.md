@@ -85,6 +85,7 @@ unsupported choices and out-of-range number writes are rejected locally.
 |------|--------------|
 | `__init__.py` | Lifecycle, IoT cache, wake retry loop, video pipeline glue. |
 | `state.py` | Awake / battery / charge state machine, event fan-out. |
+| `connectivity.py` | Online/offline tracking: cloud presence poll + live-video evidence → `connection_status`. |
 | `always_connected.py` | Mains-powered (IPC) session policy: always-connected toggle, unattended reconnect backoff. |
 | `motion.py` | Translates raw MQTT alarms into HA binary-sensor pulses. |
 | `iot.py` | Capability parsing and feature checks, IoT value normalization/lookups. |
